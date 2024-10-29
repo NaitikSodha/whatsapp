@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Sync</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    #messages { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; }
+    input[type="text"] { width: 80%; }
+    button { width: 18%; }
+    #namePrompt { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Real-Time Message Sync</h1>
+  <div id="namePrompt">
+    <input type="text" id="nameInput" placeholder="Enter your name..." autofocus>
+    <button onclick="setName()">Set Name</button>
+  </div>
+  <div id="messages"></div>
+  <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+  <button id="sendButton" disabled>Send</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const nameInput = document.getElementById('nameInput');
+    const namePrompt = document.getElementById('namePrompt');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const messagesDiv = document.getElementById('messages');
+
+    // Always prompt for the user's name on page load
+    function promptForName() {
+      namePrompt.style.display = 'block';
+      messageInput.disabled = true;
+      sendButton.disabled = true;
+    }
+
+    function setName() {
+      const name = nameInput.value.trim();
+      if (name) {
+        // Store the name in localStorage
+        localStorage.setItem('userName', name);
+        // Hide the name prompt and show the chat UI
+        namePrompt.style.display = 'none';
+        initializeChat(name);
+      }
+    }
+
+    function initializeChat(userName) {
+      messageInput.disabled = false;
+      sendButton.disabled = false;
+
+      // Display received messages
+      socket.on('message', (data) => {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = `${data.name}: ${data.message}`;
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+
+      // Define the sendMessage function inside initializeChat
+      function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message) {
+          socket.emit('message', { name: userName, message });
+          messageInput.value = '';
+        }
+      }
+
+      // Attach the sendMessage function to the send button
+      sendButton.addEventListener('click', sendMessage);
+
+      // Allow sending messages with Enter key
+      messageInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+          sendMessage();
+          event.preventDefault();
+        }
+      });
+    }
+
+    // Always prompt for name on page load
+    promptForName();
+  </script>
+</body>
+</html>
